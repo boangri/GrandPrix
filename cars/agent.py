@@ -82,7 +82,8 @@ class SimpleCarAgent(Agent):
 
     def show_weights(self):
         params = self.neural_net.sizes, self.neural_net.weights, self.neural_net.biases
-        np.set_printoptions(threshold=np.nan)
+        #np.set_printoptions(threshold=np.nan)
+        np.set_printoptions(threshold=1e9)
         return repr(params)
 
     def to_file(self, filename):

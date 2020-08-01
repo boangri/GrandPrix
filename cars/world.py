@@ -103,25 +103,29 @@ class SimpleCarWorld(World):
             )
             self.circles[a] += angle(self.agent_states[a].position, next_agent_state.position) / (2*pi)
             self.agent_states[a] = next_agent_state
-            a.receive_feedback(self.reward(next_agent_state, collision))
+            a.receive_feedback(self.reward(next_agent_state, collision, vision))
 
-    def reward(self, state, collision):
+    def reward(self, state, collision, sensor_info):
         """
         Вычисление награды агента, находящегося в состоянии state.
         Эту функцию можно (и иногда нужно!) менять, чтобы обучить вашу сеть именно тем вещам, которые вы от неё хотите
+        :param sensor_info:
         :param state: текущее состояние агента
         :param collision: произошло ли столкновение со стеной на прошлом шаге
         :return reward: награду агента (возможно, отрицательную)
         """
-        a = np.sin(angle(-state.position, state.heading))
-        heading_reward = 1 if a > 0.1 else a if a > 0 else 0
-        heading_penalty = a if a <= 0 else 0
-        idle_penalty = 0 if abs(state.velocity) > self.MIN_SPEED else -self.IDLENESS_PENALTY
-        speeding_penalty = 0 if abs(state.velocity) < self.MAX_SPEED else -self.SPEEDING_PENALTY * abs(state.velocity)
-        collision_penalty = - max(abs(state.velocity), 0.1) * int(collision) * self.COLLISION_PENALTY
-
-        return heading_reward * self.HEADING_REWARD + heading_penalty * self.WRONG_HEADING_PENALTY + collision_penalty \
-               + idle_penalty + speeding_penalty
+        V = sensor_info[0]
+        sin = -sensor_info[1]
+        heading_reward = V*sin
+        ladar = np.array(sensor_info[2:])
+        l = len(ladar)
+        n = int((l - 1) / 2)  # индекс в массиве ladar для направления вперед
+        s = ladar[n]  # расстояние до стенки прямо по курсу
+        speeding_penalty = abs(V*V - 0.45*s)
+        collision_penalty = int(collision) * self.COLLISION_PENALTY
+        reward = heading_reward * self.HEADING_REWARD - collision_penalty - speeding_penalty
+        # print("reward=%.3f" % reward)
+        return reward
 
     def eval_reward(self, state, collision):
         """
@@ -149,7 +153,7 @@ class SimpleCarWorld(World):
             self.visualize(scale)
             if self._update_display() == pygame.QUIT:
                 break
-            sleep(0.1)
+            # sleep(0.1)
 
         for i, agent in enumerate(self.agents):
             try:
@@ -180,13 +184,13 @@ class SimpleCarWorld(World):
             )
             self.circles[agent] += angle(self.agent_states[agent].position, next_agent_state.position) / (2*pi)
             self.agent_states[agent] = next_agent_state
-            rewards.append(self.eval_reward(next_agent_state, collision))
+            rewards.append(self.reward(next_agent_state, collision, vision))
             agent.receive_feedback(rewards[-1])
             if visual:
                 self.visualize(scale)
                 if self._update_display() == pygame.QUIT:
                     break
-                sleep(0.05)
+                # sleep(0.05)
 
         return np.mean(rewards)
 

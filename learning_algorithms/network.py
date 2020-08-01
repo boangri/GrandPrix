@@ -88,6 +88,7 @@ class Network(object):
         if test_data is not None: n_test = len(test_data)
         n = len(training_data)
         success_tests = 0
+        print("Start SGD ", end='')
         for j in range(epochs):
             random.shuffle(training_data)
             mini_batches = [
@@ -100,7 +101,9 @@ class Network(object):
                 print("Эпоха {0}: {1} / {2}".format(
                     j, success_tests, n_test))
             else:
-                print("Эпоха {0} завершена".format(j))
+                pass
+                # print("Эпоха {0} завершена".format(j))
+        print("Эпоха {0} завершена".format(j))
         if test_data is not None:
             return success_tests / n_test
 
