@@ -41,6 +41,7 @@ class SimpleCarAgent(Agent):
         self.chosen_actions_history = deque([], maxlen=history_data)
         self.reward_history = deque([], maxlen=history_data)
         self.step = 0
+        self.avg_reward = 0.
 
     @classmethod
     def from_weights(cls, layers, weights, biases):
@@ -100,29 +101,22 @@ class SimpleCarAgent(Agent):
         # хотим предсказать награду за все действия, доступные из текущего состояния
         rewards_to_controls_map = {}
         # дискретизируем множество значений, так как все возможные мы точно предсказать не сможем
-        for steering in np.linspace(-1, 1, 3):  # выбирать можно и другую частоту дискретизации, но
-            for acceleration in np.linspace(-0.75, 0.75, 3):  # в наших тестах будет именно такая
-                action = Action(steering, acceleration)
-                agent_vector_representation = np.append(sensor_info, action)
-                agent_vector_representation = agent_vector_representation.flatten()[:, np.newaxis]
-                predicted_reward = float(self.neural_net.feedforward(agent_vector_representation))
-                rewards_to_controls_map[predicted_reward] = action
-
-        # ищем действие, которое обещает максимальную награду
-        rewards = list(rewards_to_controls_map.keys())
-        highest_reward = max(rewards)
-        best_action = rewards_to_controls_map[highest_reward]
-
-        # Добавим случайности, дух авантюризма. Иногда выбираем совершенно
-        # рандомное действие
-        if (not self.evaluate_mode) and (random.random() < 0.05):
-            highest_reward = rewards[np.random.choice(len(rewards))]
-            best_action = rewards_to_controls_map[highest_reward]
-        # следующие строки помогут вам понять, что предсказывает наша сеть
-        #     print("Chosen random action w/reward: {}".format(highest_reward))
-        # else:
-        #     print("Chosen action w/reward: {}".format(highest_reward))
-
+        all_actions = ((0., 0.), (0., .75), (0., -.75), (1., .75), (-1., .75))
+        probabilities = np.zeros(5)
+        s = 0.  # sum for softmax
+        ind = 0
+        for steering, acceleration in all_actions:
+            action = Action(steering, acceleration)
+            agent_vector_representation = np.append(sensor_info, action)
+            agent_vector_representation = agent_vector_representation.flatten()[:, np.newaxis]
+            predicted_reward = float(self.neural_net.feedforward(agent_vector_representation))
+            probabilities[ind] = np.exp(predicted_reward)
+            s += probabilities[ind]
+            ind += 1
+        probabilities /= s
+        ind = np.random.choice(5, size=1, p=probabilities)[0]
+        steering, acceleration = all_actions[ind]
+        best_action = Action(steering, acceleration)
         # запомним всё, что только можно: мы хотим учиться на своих ошибках
         self.sensor_data_history.append(sensor_info)
         self.chosen_actions_history.append(best_action)
@@ -131,7 +125,7 @@ class SimpleCarAgent(Agent):
 
         return best_action
 
-    def receive_feedback(self, reward, train_every=50, reward_depth=7):
+    def receive_feedback(self, reward, train_every=100, reward_depth=10):
         """
         Получить реакцию на последнее решение, принятое сетью, и проанализировать его
         :param reward: оценка внешним миром наших действий
@@ -140,6 +134,8 @@ class SimpleCarAgent(Agent):
         """
         # считаем время жизни сети; помогает отмерять интервалы обучения
         self.step += 1
+        q = .001 if self.step > 1000 else 1./float(self.step)
+        self.avg_reward = (1. - q)*self.avg_reward + q*reward
 
         # начиная с полной полученной истинной награды,
         # размажем её по предыдущим наблюдениям
@@ -149,7 +145,7 @@ class SimpleCarAgent(Agent):
         i = -1
         while len(self.reward_history) > abs(i) and abs(i) < reward_depth:
             self.reward_history[i] += reward
-            reward *= 0.5
+            reward *= 0.9
             i -= 1
 
         # Если у нас накопилось хоть чуть-чуть данных, давайте потренируем нейросеть
@@ -157,7 +153,7 @@ class SimpleCarAgent(Agent):
         # (проверьте, что вы в принципе храните достаточно данных (параметр `history_data` в `__init__`),
         # чтобы условие len(self.reward_history) >= train_every выполнялось
         if not self.evaluate_mode and (len(self.reward_history) >= train_every) and not (self.step % train_every):
-            X_train = np.concatenate([self.sensor_data_history, self.chosen_actions_history], axis=1)
-            y_train = self.reward_history
+            X_train = np.concatenate([self.sensor_data_history, self.chosen_actions_history], axis=1)[-10*train_every:]
+            y_train = np.array(self.reward_history)[-10*train_every:]
             train_data = [(x[:, np.newaxis], y) for x, y in zip(X_train, y_train)]
             self.neural_net.SGD(training_data=train_data, epochs=15, mini_batch_size=train_every, eta=0.05)

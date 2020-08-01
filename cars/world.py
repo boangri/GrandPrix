@@ -28,7 +28,7 @@ class World(metaclass=ABCMeta):
 class SimpleCarWorld(World):
     # Научиться не врезаться в стенки
     COLLISION_PENALTY = 32 * 1e0
-    HEADING_REWARD = 0 * 1e-1
+    HEADING_REWARD = 10 * 1e0
     WRONG_HEADING_PENALTY = 0 * 1e0
     IDLENESS_PENALTY = 32 * 1e-1
     SPEEDING_PENALTY = 0 * 1e-1
@@ -250,6 +250,8 @@ class SimpleCarWorld(World):
             a = self.agents[0]
             draw_text("Reward: %.3f" % a.reward_history[-1], self._info_surface, scale, self.size,
                       text_color=white, bg_color=black)
+            draw_text("Step: %d Avg reward: %.3f" % (a.step, a.avg_reward), self._info_surface, scale, self.size,
+                      text_color=white, bg_color=black, tlpoint=(self._info_surface.get_width() - 790, 10))
             steer, acc = a.chosen_actions_history[-1]
             state = self.agent_states[a]
             draw_text("Action: steer.: %.2f, accel: %.2f" % (steer, acc), self._info_surface, scale,
