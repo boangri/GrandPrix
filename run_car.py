@@ -29,7 +29,7 @@ if args.filename:
     agent = SimpleCarAgent.from_file(args.filename)
     w = SimpleCarWorld(1, m, SimplePhysics, SimpleCarAgent, window=window, timedelta=0.2)
     if args.evaluate:
-        print(w.evaluate_agent(agent, steps, visual=window))
+        print(w.evaluate_agent(agent, steps))
     else:
         w.set_agents([agent])
         w.run(steps)
