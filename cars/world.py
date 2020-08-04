@@ -195,7 +195,7 @@ class SimpleCarWorld(World):
                     break
                 # sleep(0.05)
 
-        return np.mean(rewards)
+        return np.mean(rewards), self.circles[agent]
 
     def vision_for(self, agent):
         """
