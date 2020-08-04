@@ -24,7 +24,7 @@ class Agent(metaclass=ABCMeta):
 
 
 class SimpleCarAgent(Agent):
-    def __init__(self, history_data=int(50000)):
+    def __init__(self, history_data=int(500000)):
         """
         Создаёт машинку
         :param history_data: количество хранимых нами данных о результатах предыдущих шагов

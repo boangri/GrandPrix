@@ -12,24 +12,26 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--steps", type=int)
 parser.add_argument("-f", "--filename", type=str)
 parser.add_argument("-e", "--evaluate", type=bool)
+parser.add_argument("-w", "--window", type=bool)
 parser.add_argument("--seed", type=int)
 args = parser.parse_args()
 
-print(args.steps, args.seed, args.filename, args.evaluate)
+print(args.steps, args.seed, args.filename, args.evaluate, args.window)
 
 steps = args.steps
 seed = args.seed if args.seed else 23
+window = args.window if args.window else False
 np.random.seed(seed)
 random.seed(seed)
 m = generate_map(8, 5, 3, 3)
 
 if args.filename:
     agent = SimpleCarAgent.from_file(args.filename)
-    w = SimpleCarWorld(1, m, SimplePhysics, SimpleCarAgent, timedelta=0.2)
+    w = SimpleCarWorld(1, m, SimplePhysics, SimpleCarAgent, window=window, timedelta=0.2)
     if args.evaluate:
-        print(w.evaluate_agent(agent, steps))
+        print(w.evaluate_agent(agent, steps, visual=window))
     else:
         w.set_agents([agent])
         w.run(steps)
 else:
-    SimpleCarWorld(1, m, SimplePhysics, SimpleCarAgent, timedelta=0.2).run(steps)
+    SimpleCarWorld(1, m, SimplePhysics, SimpleCarAgent, window=window, timedelta=0.2).run(steps)

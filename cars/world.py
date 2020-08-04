@@ -45,7 +45,7 @@ class SimpleCarWorld(World):
 
     size = (800, 600)
 
-    def __init__(self, num_agents, car_map, Physics, agent_class, **physics_pars):
+    def __init__(self, num_agents, car_map, Physics, agent_class, window=True, **physics_pars):
         """
         Инициализирует мир
         :param num_agents: число агентов в мире
@@ -57,6 +57,7 @@ class SimpleCarWorld(World):
         """
         self.physics = Physics(car_map, **physics_pars)
         self.map = car_map
+        self.visual = window
 
         # создаём агентов
         self.set_agents(num_agents, agent_class)
@@ -147,23 +148,25 @@ class SimpleCarWorld(World):
         Основной цикл мира; по завершении сохраняет текущие веса агента в файл network_config_agent_n_layers_....txt
         :param steps: количество шагов цикла; до внешней остановки, если None
         """
-        scale = self._prepare_visualization()
+        if self.visual:
+            scale = self._prepare_visualization()
         for _ in range(steps) if steps is not None else itertools.count():
             self.transition()
-            self.visualize(scale)
-            if self._update_display() == pygame.QUIT:
-                break
+            if self.visual:
+                self.visualize(scale)
+                if self._update_display() == pygame.QUIT:
+                    break
             # sleep(0.1)
 
         for i, agent in enumerate(self.agents):
             try:
-                filename = "network_config_agent_%d_layers_%s.txt" % (i, "_".join(map(str, agent.neural_net.sizes)))
+                filename = "a_%d_layers_%s.txt" % (i, "_".join(map(str, agent.neural_net.sizes)))
                 agent.to_file(filename)
                 print("Saved agent parameters to '%s'" % filename)
             except AttributeError:
                 pass
 
-    def evaluate_agent(self, agent, steps=1000, visual=True):
+    def evaluate_agent(self, agent, steps=1000):
         """
         Прогонка цикла мира для конкретного агента (см. пример использования в комментариях после if _name__ == "__main__")
         :param agent: SimpleCarAgent
@@ -174,7 +177,7 @@ class SimpleCarWorld(World):
         agent.evaluate_mode = True
         self.set_agents([agent])
         rewards = []
-        if visual:
+        if self.visual:
             scale = self._prepare_visualization()
         for _ in range(steps):
             vision = self.vision_for(agent)
@@ -186,7 +189,7 @@ class SimpleCarWorld(World):
             self.agent_states[agent] = next_agent_state
             rewards.append(self.reward(next_agent_state, collision, vision))
             agent.receive_feedback(rewards[-1])
-            if visual:
+            if self.visual:
                 self.visualize(scale)
                 if self._update_display() == pygame.QUIT:
                     break
