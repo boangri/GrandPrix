@@ -68,7 +68,7 @@ class Network(object):
         return output
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
-            test_data=None):
+            test_data=None, verbose=False):
         """
         Обучить нейронную сеть, используя алгоритм стохастического
         (mini-batch) градиентного спуска.
@@ -88,7 +88,8 @@ class Network(object):
         if test_data is not None: n_test = len(test_data)
         n = len(training_data)
         success_tests = 0
-        print("Start SGD ", end='')
+        if verbose:
+            print("Start SGD ", end='')
         for j in range(epochs):
             random.shuffle(training_data)
             mini_batches = [
@@ -98,12 +99,13 @@ class Network(object):
                 self.update_mini_batch(mini_batch, eta)
             if test_data is not None:
                 success_tests = self.evaluate(test_data)
-                print("Эпоха {0}: {1} / {2}".format(
-                    j, success_tests, n_test))
+                if verbose:
+                    print("Эпоха {0}: {1} / {2}".format(j, success_tests, n_test))
             else:
                 pass
                 # print("Эпоха {0} завершена".format(j))
-        print("Эпоха {0} завершена".format(j))
+        if verbose:
+            print("Эпоха {0} завершена".format(j))
         if test_data is not None:
             return success_tests / n_test
 
