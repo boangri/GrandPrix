@@ -41,7 +41,8 @@ class SimpleCarAgent(Agent):
         self.chosen_actions_history = deque([], maxlen=history_data)
         self.reward_history = deque([], maxlen=history_data)
         self.step = 0
-        self.avg_reward = 0.
+        self.avg_reward = 0.    # средняя награда за последнюю тысячу шагов
+        self.sum_reward = 0.    # сумма всех наград
 
     @classmethod
     def from_weights(cls, layers, weights, biases):
@@ -136,6 +137,7 @@ class SimpleCarAgent(Agent):
         self.step += 1
         q = .001 if self.step > 1000 else 1./float(self.step)
         self.avg_reward = (1. - q)*self.avg_reward + q*reward
+        self.sum_reward += reward
 
         # начиная с полной полученной истинной награды,
         # размажем её по предыдущим наблюдениям

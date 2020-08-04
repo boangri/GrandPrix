@@ -163,6 +163,8 @@ class SimpleCarWorld(World):
                 filename = "a_%d_layers_%s.txt" % (i, "_".join(map(str, agent.neural_net.sizes)))
                 agent.to_file(filename)
                 print("Saved agent parameters to '%s'" % filename)
+                print("Steps: %d Mean reward: %.3f Circles/1000steps: %.3f" %
+                      (agent.step, agent.sum_reward/agent.step, self.circles[agent]*1000/agent.step))
             except AttributeError:
                 pass
 
