@@ -5,8 +5,8 @@ from collections import deque
 import numpy as np
 
 from cars.utils import Action
-from learning_algorithms.network import Network
-
+# from learning_algorithms.network import Network
+from models.RLmodel import Network
 
 class Agent(metaclass=ABCMeta):
     @property
@@ -32,11 +32,12 @@ class SimpleCarAgent(Agent):
         self.evaluate_mode = False  # этот агент учится или экзаменутеся? если учится, то False
         self._rays = 5  # выберите число лучей ладара; например, 5
         # here +2 is for 2 inputs from elements of Action that we are trying to predict
-        self.neural_net = Network([self.rays + 4,
-                                   100,  # внутренние слои сети: выберите, сколько и в каком соотношении вам нужно
-                                   10,  # например, (self.rays + 4) * 2 или просто число
-                                   1],
-                                  output_function=lambda x: x, output_derivative=lambda x: 1)
+        # self.neural_net = Network([self.rays + 4,
+        #                            100,  # внутренние слои сети: выберите, сколько и в каком соотношении вам нужно
+        #                            10,  # например, (self.rays + 4) * 2 или просто число
+        #                            1],
+        #                           output_function=lambda x: x, output_derivative=lambda x: 1)
+        self.neural_net = Network(self.rays)
         self.sensor_data_history = deque([], maxlen=history_data)
         self.chosen_actions_history = deque([], maxlen=history_data)
         self.reward_history = deque([], maxlen=history_data)
