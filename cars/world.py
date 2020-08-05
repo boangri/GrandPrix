@@ -26,23 +26,6 @@ class World(metaclass=ABCMeta):
 
 
 class SimpleCarWorld(World):
-    # Научиться не врезаться в стенки
-    COLLISION_PENALTY = 32 * 1e0
-    HEADING_REWARD = 10 * 1e0
-    WRONG_HEADING_PENALTY = 0 * 1e0
-    IDLENESS_PENALTY = 32 * 1e-1
-    SPEEDING_PENALTY = 0 * 1e-1
-    MIN_SPEED = 0.1 * 1e0
-    MAX_SPEED = 10 * 1e0
-    # Подружиться с педалью газа (и тормоза)
-    #     COLLISION_PENALTY = 0 * 1e0
-    #     HEADING_REWARD = 0 * 1e-1
-    #     WRONG_HEADING_PENALTY = 0 * 1e0
-    #     IDLENESS_PENALTY = 32 * 1e-1
-    #     SPEEDING_PENALTY = 32 * 1e-1
-    #     MIN_SPEED = 0.1 * 1e0
-    #     MAX_SPEED = 0.7 * 1e0
-
     size = (800, 600)
 
     def __init__(self, num_agents, car_map, Physics, agent_class, window=True, **physics_pars):
@@ -102,46 +85,21 @@ class SimpleCarWorld(World):
             next_agent_state, collision = self.physics.move(
                 self.agent_states[a], action
             )
-            self.circles[a] += angle(self.agent_states[a].position, next_agent_state.position) / (2*pi)
+            progress = angle(self.agent_states[a].position, next_agent_state.position) / (2*pi)
+            self.circles[a] += progress
             self.agent_states[a] = next_agent_state
-            a.receive_feedback(self.reward(next_agent_state, collision, vision))
+            a.receive_feedback(self.reward(collision, progress))
 
-    def reward(self, state, collision, sensor_info):
+    def reward(self, collision, progress):
         """
         Вычисление награды агента, находящегося в состоянии state.
         Эту функцию можно (и иногда нужно!) менять, чтобы обучить вашу сеть именно тем вещам, которые вы от неё хотите
-        :param sensor_info:
-        :param state: текущее состояние агента
+        :param progress: продвижение в долях от полного круга
         :param collision: произошло ли столкновение со стеной на прошлом шаге
         :return reward: награду агента (возможно, отрицательную)
         """
-        V = sensor_info[0]
-        sin = -sensor_info[1]
-        heading_reward = V*sin
-        ladar = np.array(sensor_info[2:])
-        l = len(ladar)
-        n = int((l - 1) / 2)  # индекс в массиве ladar для направления вперед
-        s = ladar[n]  # расстояние до стенки прямо по курсу
-        speeding_penalty = abs(V*V - 0.45*s)
-        collision_penalty = int(collision) * self.COLLISION_PENALTY
-        reward = heading_reward * self.HEADING_REWARD - collision_penalty - speeding_penalty
-        # print("reward=%.3f" % reward)
+        reward = progress*1000. - 1. - 10.*int(collision)
         return reward
-
-    def eval_reward(self, state, collision):
-        """
-        Награда "по умолчанию", используется в режиме evaluate
-        Удобно, чтобы не приходилось отменять свои изменения в функции reward для оценки результата
-        """
-        a = -np.sin(angle(-state.position, state.heading))
-        heading_reward = 1 if a > 0.1 else a if a > 0 else 0
-        heading_penalty = a if a <= 0 else 0
-        idle_penalty = 0 if abs(state.velocity) > self.MIN_SPEED else -self.IDLENESS_PENALTY
-        speeding_penalty = 0 if abs(state.velocity) < self.MAX_SPEED else -self.SPEEDING_PENALTY * abs(state.velocity)
-        collision_penalty = - max(abs(state.velocity), 0.1) * int(collision) * self.COLLISION_PENALTY
-
-        return heading_reward * self.HEADING_REWARD + heading_penalty * self.WRONG_HEADING_PENALTY + collision_penalty \
-            + idle_penalty + speeding_penalty
 
     def run(self, steps=None):
         """
