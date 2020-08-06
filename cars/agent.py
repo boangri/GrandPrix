@@ -104,6 +104,34 @@ class SimpleCarAgent(Agent):
         rewards_to_controls_map = {}
         # дискретизируем множество значений, так как все возможные мы точно предсказать не сможем
         all_actions = ((0., 0.), (0., .75), (0., -.75), (1., .75), (-1., .75))
+        probabilities = self.neural_net.predict()
+        s = 0.  # sum for softmax
+        ind = 0
+        for steering, acceleration in all_actions:
+            action = Action(steering, acceleration)
+            agent_vector_representation = np.append(sensor_info, action)
+            agent_vector_representation = agent_vector_representation.flatten()[:, np.newaxis]
+            predicted_reward = float(self.neural_net.feedforward(agent_vector_representation))
+            probabilities[ind] = np.exp(predicted_reward)
+            s += probabilities[ind]
+            ind += 1
+        probabilities /= s
+        ind = np.random.choice(5, size=1, p=probabilities)[0]
+        steering, acceleration = all_actions[ind]
+        best_action = Action(steering, acceleration)
+        # запомним всё, что только можно: мы хотим учиться на своих ошибках
+        self.sensor_data_history.append(sensor_info)
+        self.chosen_actions_history.append(best_action)
+        self.reward_history.append(0.0)  # мы пока не знаем, какая будет награда, это
+        # откроется при вызове метода receive_feedback внешним миром
+
+        return best_action
+
+    def choose_action0(self, sensor_info):
+        # хотим предсказать награду за все действия, доступные из текущего состояния
+        rewards_to_controls_map = {}
+        # дискретизируем множество значений, так как все возможные мы точно предсказать не сможем
+        all_actions = ((0., 0.), (0., .75), (0., -.75), (1., .75), (-1., .75))
         probabilities = np.zeros(5)
         s = 0.  # sum for softmax
         ind = 0
