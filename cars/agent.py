@@ -22,7 +22,6 @@ class Agent(metaclass=ABCMeta):
     def receive_feedback(self, reward):
         pass
 
-
 class SimpleCarAgent(Agent):
     def __init__(self, history_data=int(500000)):
         """
@@ -37,13 +36,16 @@ class SimpleCarAgent(Agent):
         #                            10,  # например, (self.rays + 4) * 2 или просто число
         #                            1],
         #                           output_function=lambda x: x, output_derivative=lambda x: 1)
-        self.neural_net = Network(self.rays)
+        self.network = Network()
+        self.neural_net = self.network.createModel(self.rays)
+        print(self.neural_net)
         self.sensor_data_history = deque([], maxlen=history_data)
         self.chosen_actions_history = deque([], maxlen=history_data)
         self.reward_history = deque([], maxlen=history_data)
         self.step = 0
         self.avg_reward = 0.    # средняя награда за последнюю тысячу шагов
         self.sum_reward = 0.    # сумма всех наград
+        self.__version__ = version
 
     @classmethod
     def from_weights(cls, layers, weights, biases):
@@ -100,23 +102,11 @@ class SimpleCarAgent(Agent):
         return self._rays
 
     def choose_action(self, sensor_info):
-        # хотим предсказать награду за все действия, доступные из текущего состояния
-        rewards_to_controls_map = {}
-        # дискретизируем множество значений, так как все возможные мы точно предсказать не сможем
+        last_reward = self.reward_history[-1] if self.step > 0 else 0.
+        inputs = np.array(sensor_info.append(last_reward))
         all_actions = ((0., 0.), (0., .75), (0., -.75), (1., .75), (-1., .75))
-        probabilities = self.neural_net.predict()
-        s = 0.  # sum for softmax
-        ind = 0
-        for steering, acceleration in all_actions:
-            action = Action(steering, acceleration)
-            agent_vector_representation = np.append(sensor_info, action)
-            agent_vector_representation = agent_vector_representation.flatten()[:, np.newaxis]
-            predicted_reward = float(self.neural_net.feedforward(agent_vector_representation))
-            probabilities[ind] = np.exp(predicted_reward)
-            s += probabilities[ind]
-            ind += 1
-        probabilities /= s
-        ind = np.random.choice(5, size=1, p=probabilities)[0]
+        probabilities = self.neural_net.predict(inputs)
+        ind = np.random.choice(len(all_action), size=1, p=probabilities)[0]
         steering, acceleration = all_actions[ind]
         best_action = Action(steering, acceleration)
         # запомним всё, что только можно: мы хотим учиться на своих ошибках
@@ -188,3 +178,6 @@ class SimpleCarAgent(Agent):
             y_train = np.array(self.reward_history)[-10*train_every:]
             train_data = [(x[:, np.newaxis], y) for x, y in zip(X_train, y_train)]
             self.neural_net.SGD(training_data=train_data, epochs=15, mini_batch_size=train_every, eta=0.05)
+
+version = 'agent 1.0.3-keras 06.08.2020'
+print(version)
